@@ -51,7 +51,164 @@
         ;;General
             (global-set-key                 "\C-xc"         'copy)
     ;;Visual Settings
+
+
+    ;;Directories
+    
+        ;; Save all tempfiles in $TMPDIR/emacs$UID/                                                        
+        (defconst emacs-tmp-dir (expand-file-name (format "emacs%d" (user-uid)) "~/.emacs.d/temp"))
+        (setq backup-directory-alist
+            `((".*" . ,emacs-tmp-dir)))
+        (setq auto-save-file-name-transforms
+            `((".*" ,emacs-tmp-dir t)))
+        (setq auto-save-list-file-prefix
+            emacs-tmp-dir)
+    
+    
+        ;;(setq backup-directory-alist '(("." . "~/.emacs.d/auto-save-files"))) ;;Autosave custom
+        ;;(setq auto-save-file-name-transforms '((".*" , "~/.emacs.d/auto-save-files" t)))
+
+        (setq default-directory "~/Org/" )
+		
+;; Disable the splash screen 
+	(setq inhibit-splash-screen t) ;;(to enable:replace the t with 0)
+
+;; Echo keystrokes immediately.
+		(setq echo-keystrokes 0.02)
+
+;; Typography
+
+    ;Use 78 characters for a text document
+    ;    Column 0 is the first possible character
+    ;    Column 77 is the last possible character
+    ;    Column 78 will always be empty
+    ;        This is the fill column
+    ;        This gives some spacing between the text body and the 80 column indicator
+    ;    Column 79 will always be the fill column indicator
+    ;        It isn’t the fill column though
+    ;        I want it to indicate 80 chars, typically the maximum number of columns for a line, to know how to size the window itself
+    ;        Fci-Mode supports this
+    ;    Store this as the fill column because all supporting functions will do the right thing here
+    ;
+	(defconst help/column-width 78)
+	(setq-default fill-column help/column-width)
+	
+;;=============Dictionary / spelling===============
+(setq ispell-program-name "~/Tech/Hunspell/bin/hunspell.exe")
+;; "en_US" is key to lookup in `ispell-local-dictionary-alist`, please note it will be passed to hunspell CLI as "-d" parameter
+(setq ispell-local-dictionary "en_US") 
+(setq ispell-local-dictionary-alist
+      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
+	
+(defun endless/org-ispell ()
+  "Configure `ispell-skip-region-alist' for `org-mode'."
+  (make-local-variable 'ispell-skip-region-alist)
+  (add-to-list 'ispell-skip-region-alist '(org-property-drawer-re))
+  (add-to-list 'ispell-skip-region-alist '("~" "~"))
+  (add-to-list 'ispell-skip-region-alist '("=" "="))
+  (add-to-list 'ispell-skip-region-alist '("^#\\+BEGIN_SRC" . "^#\\+END_SRC")))
+(add-hook 'org-mode-hook #'endless/org-ispell)
+	
+;;=============Yasnippet================
+		(require 'yasnippet)
+		(yas-global-mode 1)
+
+		(setq yas-snippet-dirs
+      '("~/.emacs.d/snippets"                 ;; personal snippets
+        "~/Tech/Emacs Packages/snippets" ;; the default collection
+        ))
+
+(yas-global-mode 1) ;; or M-x yas-reload-all if you've started YASnippet already.
         
+;;=============ORG================
+
+;; Enable Org mode
+    (require 'org)
+
+;; Folding
+(setq org-startup-folded nil)
+
+;; Opening Attachments
+  (setq org-file-apps
+    '(("\\.docx\\'" . default)
+      ("\\.mm\\'" . default)
+      ("\\.x?html?\\'" . default)
+      ("\\.pdf\\'" . default)
+      (auto-mode . emacs)))
+
+    
+;; Make Org mode work with files ending in .org
+    (add-to-list 'auto-mode-alist '("\\.org$" . org-mode))
+    
+;; Org Directories/files
+    (setq org-default-notes-file "~/Org/working.org")
+    (setq org-directory "~/Org")
+;; Org Mobile Directories/files
+    (setq org-mobile-directory      "~/MobileOrg")
+;    (setq org-mobile-files          "~/Org/working.org");;push_to_mobile.org")
+    (setq org-mobile-inbox-for-pull "~/Org/inbox.org") ;; Set to the name of the file where new notes will be stored
+
+;; TODO workflow
+    (   setq org-todo-keywords
+        '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
+    (setq org-log-done t) ;;https://www.gnu.org/software/emacs/manual/html_node/org/Closing-items.html
+
+;; TAGS to all
+    ;;(setq org-tag-alist '(("working" . ?w) ("@home" . ?h) ("laptop" . ?l)))
+
+;; Custom Agenda Commands
+	     (setq org-agenda-custom-commands
+           '(("x" agenda)
+             ("y" agenda*)
+             ("w" todo "WAITING")
+             ("W" todo-tree "WAITING")
+             ("u" tags "+pray")
+             ("U" tags-tree "+pray")
+             ("f" occur-tree "\\<FIXME\\>")
+))
+;; Hide Properties 
+
+(require 'org)
+
+(defun org-cycle-hide-drawers (state)
+  "Re-hide all drawers after a visibility state change."
+  (when (and (derived-mode-p 'org-mode)
+             (not (memq state '(overview folded contents))))
+    (save-excursion
+      (let* ((globalp (memq state '(contents all)))
+             (beg (if globalp
+                    (point-min)
+                    (point)))
+             (end (if globalp
+                    (point-max)
+                    (if (eq state 'children)
+                      (save-excursion
+                        (outline-next-heading)
+                        (point))
+                      (org-end-of-subtree t)))))
+        (goto-char beg)
+        (while (re-search-forward org-drawer-regexp end t)
+          (save-excursion
+            (beginning-of-line 1)
+            (when (looking-at org-drawer-regexp)
+              (let* ((start (1- (match-beginning 0)))
+                     (limit
+                       (save-excursion
+                         (outline-next-heading)
+                           (point)))
+                     (msg (format
+                            (concat
+                              "org-cycle-hide-drawers:  "
+                              "`:END:`"
+                              " line missing at position %s")
+                            (1+ start))))
+                (if (re-search-forward "^[ \t]*:END:" limit t)
+                  (outline-flag-region start (point-at-eol) t)
+                  (user-error msg))))))))))
+
+				  
+
+;; Custom Set Variables
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -152,157 +309,3 @@
  ;; If there is more than one, they won't work right.
  '(default ((t (:family "Consolas" :foundry "outline" :slant normal :weight normal :height 98 :width normal)))))
     
-    ;;Directories
-    
-        ;; Save all tempfiles in $TMPDIR/emacs$UID/                                                        
-        (defconst emacs-tmp-dir (expand-file-name (format "emacs%d" (user-uid)) "~/.emacs.d/temp"))
-        (setq backup-directory-alist
-            `((".*" . ,emacs-tmp-dir)))
-        (setq auto-save-file-name-transforms
-            `((".*" ,emacs-tmp-dir t)))
-        (setq auto-save-list-file-prefix
-            emacs-tmp-dir)
-    
-    
-        ;;(setq backup-directory-alist '(("." . "~/.emacs.d/auto-save-files"))) ;;Autosave custom
-        ;;(setq auto-save-file-name-transforms '((".*" , "~/.emacs.d/auto-save-files" t)))
-
-        (setq default-directory "~/Org/" )
-    ;; Disable the splash screen 
-        (setq inhibit-splash-screen t) ;;(to enable:replace the t with 0)
-    
-    ;; 
-
-	;; Echo keystrokes immediately.
-		(setq echo-keystrokes 0.02)
-
-;; Typography
-
-    ;Use 78 characters for a text document
-    ;    Column 0 is the first possible character
-    ;    Column 77 is the last possible character
-    ;    Column 78 will always be empty
-    ;        This is the fill column
-    ;        This gives some spacing between the text body and the 80 column indicator
-    ;    Column 79 will always be the fill column indicator
-    ;        It isn’t the fill column though
-    ;        I want it to indicate 80 chars, typically the maximum number of columns for a line, to know how to size the window itself
-    ;        Fci-Mode supports this
-    ;    Store this as the fill column because all supporting functions will do the right thing here
-    ;
-	(defconst help/column-width 78)
-	(setq-default fill-column help/column-width)
-	
-;;=============Dictionary / spelling===============
-(setq ispell-program-name "~/Tech/Hunspell/bin/hunspell.exe")
-;; "en_US" is key to lookup in `ispell-local-dictionary-alist`, please note it will be passed to hunspell CLI as "-d" parameter
-(setq ispell-local-dictionary "en_US") 
-(setq ispell-local-dictionary-alist
-      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
-	
-(defun endless/org-ispell ()
-  "Configure `ispell-skip-region-alist' for `org-mode'."
-  (make-local-variable 'ispell-skip-region-alist)
-  (add-to-list 'ispell-skip-region-alist '(org-property-drawer-re))
-  (add-to-list 'ispell-skip-region-alist '("~" "~"))
-  (add-to-list 'ispell-skip-region-alist '("=" "="))
-  (add-to-list 'ispell-skip-region-alist '("^#\\+BEGIN_SRC" . "^#\\+END_SRC")))
-(add-hook 'org-mode-hook #'endless/org-ispell)
-	
-;;=============Yasnippet================
-		(add-to-list 'load-path "~/.emacs.d/elpa/yasnippet-20170923.1646")
-		(require 'yasnippet)
-		(yas-global-mode 1)
-
-		(setq yas-snippet-dirs
-      '("~/.emacs.d/snippets"                 ;; personal snippets
-        "~/emacs.d/elpa/yasnippet-20170923.1646/snippets" ;; the default collection
-        ))
-
-(yas-global-mode 1) ;; or M-x yas-reload-all if you've started YASnippet already.
-        
-;;=============ORG================
-
-;; Enable Org mode
-    (require 'org)
-
-;; Folding
-(setq org-startup-folded nil)
-
-;; Opening Attachments
-  (setq org-file-apps
-    '(("\\.docx\\'" . default)
-      ("\\.mm\\'" . default)
-      ("\\.x?html?\\'" . default)
-      ("\\.pdf\\'" . default)
-      (auto-mode . emacs)))
-
-    
-;; Make Org mode work with files ending in .org
-    (add-to-list 'auto-mode-alist '("\\.org$" . org-mode))
-    
-;; Org Directories/files
-    (setq org-default-notes-file "~/Org/working.org")
-    (setq org-directory "~/Org")
-;; Org Mobile Directories/files
-    (setq org-mobile-directory      "~/MobileOrg")
-;    (setq org-mobile-files          "~/Org/working.org");;push_to_mobile.org")
-    (setq org-mobile-inbox-for-pull "~/Org/inbox.org") ;; Set to the name of the file where new notes will be stored
-
-;; TODO workflow
-    (   setq org-todo-keywords
-        '((sequence "TODO" "IN-PROGRESS" "WAITING" "DONE")))
-    (setq org-log-done t) ;;https://www.gnu.org/software/emacs/manual/html_node/org/Closing-items.html
-
-;; TAGS to all
-    ;;(setq org-tag-alist '(("working" . ?w) ("@home" . ?h) ("laptop" . ?l)))
-
-;; Custom Agenda Commands
-	     (setq org-agenda-custom-commands
-           '(("x" agenda)
-             ("y" agenda*)
-             ("w" todo "WAITING")
-             ("W" todo-tree "WAITING")
-             ("u" tags "+pray")
-             ("U" tags-tree "+pray")
-             ("f" occur-tree "\\<FIXME\\>")
-))
-;; Hide Properties 
-
-(require 'org)
-
-(defun org-cycle-hide-drawers (state)
-  "Re-hide all drawers after a visibility state change."
-  (when (and (derived-mode-p 'org-mode)
-             (not (memq state '(overview folded contents))))
-    (save-excursion
-      (let* ((globalp (memq state '(contents all)))
-             (beg (if globalp
-                    (point-min)
-                    (point)))
-             (end (if globalp
-                    (point-max)
-                    (if (eq state 'children)
-                      (save-excursion
-                        (outline-next-heading)
-                        (point))
-                      (org-end-of-subtree t)))))
-        (goto-char beg)
-        (while (re-search-forward org-drawer-regexp end t)
-          (save-excursion
-            (beginning-of-line 1)
-            (when (looking-at org-drawer-regexp)
-              (let* ((start (1- (match-beginning 0)))
-                     (limit
-                       (save-excursion
-                         (outline-next-heading)
-                           (point)))
-                     (msg (format
-                            (concat
-                              "org-cycle-hide-drawers:  "
-                              "`:END:`"
-                              " line missing at position %s")
-                            (1+ start))))
-                (if (re-search-forward "^[ \t]*:END:" limit t)
-                  (outline-flag-region start (point-at-eol) t)
-                  (user-error msg))))))))))

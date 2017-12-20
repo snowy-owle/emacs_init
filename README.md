@@ -1,1 +1,1 @@
-# emacs_init
+# Just my init.el file.
