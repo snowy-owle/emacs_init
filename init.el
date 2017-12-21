@@ -5,7 +5,8 @@
 (require 'org-bullets)
 (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
 
-
+(require 'package)
+(add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t)
 
 (require 'which-key)
 (which-key-mode)
@@ -17,6 +18,7 @@
 ;; (xah-fly-set-layout "dvorak") ; by default, it's dvorak
 
 (xah-fly-keys 1)
+(global-set-key (kbd "`") 'xah-fly-command-mode-activate)
 
 
 ;; Added by Package.el.  This must come before configurations of
@@ -30,6 +32,7 @@
   ;; For important compatibility libraries like cl-lib
   (add-to-list 'package-archives '("gnu" . "https://elpa.gnu.org/packages/")))
 (package-initialize)
+
 
 
 ;;Emacs General
@@ -125,6 +128,18 @@
 ;; Enable Org mode
     (require 'org)
 
+; (require 'org-brain)
+
+
+  ; (setq org-brain-path "~/Org/brain")
+  ; :config
+  ; (setq org-id-track-globally t)
+  ; (setq org-id-locations-file "~/.emacs.d/.org-id-locations")
+  ; (push '("b" "Brain" plain (function org-brain-goto-end)
+          ; "* %i%?" :empty-lines 1)
+        ; org-capture-templates)
+  ; (setq org-brain-visualize-default-choices 'all)
+  ; (setq org-brain-title-max-length 12)
 ;; Folding
 (setq org-startup-folded nil)
 
@@ -263,7 +278,7 @@
       "String" :empty-lines-before 1 :empty-lines-after 1))))
  '(package-selected-packages
    (quote
-    (org-bullets which-key xah-fly-keys espresso-theme zenburn-theme noctilux-theme solarized-theme yasnippet)))
+    (org-plus-contrib org org-brain org-bullets which-key xah-fly-keys espresso-theme zenburn-theme noctilux-theme solarized-theme yasnippet)))
  '(pdf-view-midnight-colors (quote ("#DCDCCC" . "#383838")))
  '(pos-tip-background-color "#073642")
  '(pos-tip-foreground-color "#93a1a1")
